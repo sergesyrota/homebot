@@ -9,7 +9,6 @@
   "author": "",
   "license": "BSD",
   "dependencies": {
-    "claudia-bot-builder": "~2.11.0",
-    "huh": "~2.0.1"
+    "claudia-bot-builder": "~2.11.0"
   }
 }

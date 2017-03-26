@@ -1,6 +1,14 @@
 {
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/sergesyrota/SyrotaAutomationPhp.git"
+        }
+    ],
     "require": {
         "aws/aws-sdk-php": "*",
-        "pimax/fb-messenger-php": "dev-master"
+        "pimax/fb-messenger-php": "dev-master",
+        "silex/silex": "~2.0",
+        "sergesyrota/syrota-automation": "1.*"
     }
 }

@@ -127,6 +127,12 @@ function handleMessage($body, $bot) {
         return handleGarageClose($body, $bot);
     }
     
+    if (
+        (stristr($body->text, 'wake pc'))
+    ) {
+        return handleWakePc($body, $bot);
+    }
+    
     return handleUnknown($body, $bot);
 }
 
@@ -214,6 +220,14 @@ function handleGarageClose($body, $bot) {
     } else {
         handleGarageStatus($body, $bot);
     }
+}
+
+function handleWakePc($body, $bot) {
+    exec('wakelan BC:5F:F4:65:A8:13', $out, $retval);
+    if ($retval != 0) {
+        $bot->send(new Message($body->sender, "Not able to wake: " . $out));
+    }
+    $bot->send(new Message($body->sender, "Wake command sent"));
 }
 
 

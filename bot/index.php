@@ -41,6 +41,7 @@ $client = SqsClient::factory(array(
 
 $start = time();
 while (true) {
+    touch($pidFile);
     $result = $client->receiveMessage(array(
         'QueueUrl' => $queueUrl,
         'MaxNumberOfMessages' => 1,
@@ -65,7 +66,7 @@ while (true) {
 //    $bot->send(new Message($body->sender, $body->text));
     }
     if ((time() - $start) > 3600*24*7) {
-        // Reboot after a week, as it seems it stops responding normally after that time frame
+        // Reboot after a week, as it seems it stops responding normally after some time
         exit();
     }
 }
@@ -82,6 +83,11 @@ function getRequiredEnv($var)
 function isProcessRunning($pidFile) {
     if (!file_exists($pidFile) || !is_file($pidFile)) return false;
     $pid = file_get_contents($pidFile);
+    // Check if process is dead
+    if (time() - filemtime($pidFile) > 300) {
+        posix_kill($pid, SIGKILL);
+        return false;
+    }
     return posix_kill($pid, 0);
 }
 

@@ -181,11 +181,11 @@ function sendGraph($body, $bot) {
 
 function handleLeahCrib($body, $bot) {
     $url = "http://cam-living.syrota.com/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=view&pwd=view";
-    sendImage($body, $bot, $url);
+    sendImage($body, $bot, $url, __DIR__.'/leah-images/', true);
 }
 
-function sendImage($body, $bot, $url) {
-    $img = tempnam('/tmp', 'homebot-image');
+function sendImage($body, $bot, $url, $path='/tmp', $preserve=false) {
+    $img = tempnam($path, 'homebot-image');
     file_put_contents($img, file_get_contents($url));
     $token = getRequiredEnv('FB_PAGE_TOKEN');
     $curlCommand = "curl  \
@@ -195,7 +195,9 @@ function sendImage($body, $bot, $url) {
       \"https://graph.facebook.com/v2.6/me/messages?access_token={$token}\" 2>/dev/null";
      `$curlCommand`;
 //    print_r($bot->send(new ImageMessage($body->sender, $img)));
-    unlink($img);
+    if (!$preserve) {
+        unlink($img);
+    }
 }
 
 function handleGarageStatus($body, $bot) {

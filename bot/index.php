@@ -185,7 +185,7 @@ function handleLeahCrib($body, $bot) {
 }
 
 function sendImage($body, $bot, $url, $path='/tmp', $preserve=false) {
-    $img = tempnam($path, 'homebot-image');
+    $img = tempnam($path, 'homebot-image').".jpg";
     file_put_contents($img, file_get_contents($url));
     $token = getRequiredEnv('FB_PAGE_TOKEN');
     $curlCommand = "curl  \

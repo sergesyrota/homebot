@@ -180,6 +180,21 @@ function sendGraph($body, $bot) {
 }
 
 function handleLeahCrib($body, $bot) {
+    // Get status from neural net
+    $status = json_decode(file_get_contents('/home/sergey/git-source/leah-in-crib-machine-learning/history.json'), true);
+    $data = analyzeLeahData($status);
+    if ($data['age'] < 300) {
+        if ($data['inBedProb'] >= 0.4 && $data['inBedProb'] <= 0.6) {
+            $message = 'Not sure, check out the pic';
+        } else if ($data['inBedProb'] > 0.6 && !$data['moving']) {
+            $message = 'Looks sleeping to me';
+        } else if ($data['inBedProb'] > 0.6 && $data['moving']) {
+            $message = 'Does not seem like it';
+        } else if ($data['inBedProb'] < 0.4) {
+            $message = 'Seems nobody\'s there';
+        }
+        $bot->send(new Message($body->sender, $message));
+    }
     $url = "http://cam-living.syrota.com/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=view&pwd=view";
     sendImage($body, $bot, $url, __DIR__.'/leah-images/', true);
 }
@@ -256,4 +271,27 @@ function tryCmd($device, $command, $attempts=3) {
 
 function ctof($c) {
     return(($c * 9/5) + 32);
+}
+
+function analyzeLeahData($data) {
+    $moving = false;
+    $inBedProb = 0;
+    $j=0;
+    for ($i=count($data)-1; $i--; $i>=0) {
+        // Motion is only relevant for last 5 samples
+        if ($j<5 && $data[$i]["motion"] == 1) {
+            $moving = true;
+        }
+        // Probability estimate for last 10 samples
+        if ($j<10) {
+            $inBedProb+=$data[$i]["prediction"];
+        }
+        $j++;
+        if ($j>=10) {
+            break;
+        }
+    }
+    $inBedProb = $inBedProb/$j;
+    $last = $data[count($data)-1];
+    return (['moving' => $moving, 'inBedProb' => $inBedProb, 'age' => (time()-$last['time'])]);
 }

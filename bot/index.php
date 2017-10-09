@@ -304,11 +304,11 @@ function analyzeLeahData() {
     $j=0;
     for ($i=count($data)-1; $i--; $i>=0) {
         // Motion is only relevant for last 5 samples
-        if ($j<5 && $data[$i]["motion"] == 1) {
+        if ($j<10 && $data[$i]["motion"] == 1) {
             $moving = true;
         }
         $j++;
-        if ($j>=5) {
+        if ($j>=10) {
             break;
         }
     }

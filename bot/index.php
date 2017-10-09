@@ -40,6 +40,8 @@ $client = SqsClient::factory(array(
 ));
 
 $start = time();
+// subscriber => FB id, checkCondition => bool function, message => static text
+$notifySubscribers = [];
 while (true) {
     touch($pidFile);
     $result = $client->receiveMessage(array(
@@ -64,6 +66,13 @@ while (true) {
 //    $body = json_decode($message[0]['Body']);
 //    print_r($body);
 //    $bot->send(new Message($body->sender, $body->text));
+    }
+    // Handle notifications
+    foreach ($notifySubscribers as $key=>$notify) {
+        if ($notify['checkCondition']()) {
+            unset($notifySubscribers[$key]);
+            $bot->send(new Message($notify['subscriber'], $notify['message']));
+        }
     }
     if ((time() - $start) > 3600*24*7) {
         // Reboot after a week, as it seems it stops responding normally after some time
@@ -92,6 +101,9 @@ function isProcessRunning($pidFile) {
 }
 
 function handleMessage($body, $bot) {
+    // OUCH... Bad hack!
+    global $notifySubscribers;
+    
     if (
         (stristr($body->text, 'temperature') && stristr($body->text, 'master')) ||
         (stristr($body->text, 'temp') && stristr($body->text, 'master'))
@@ -104,6 +116,19 @@ function handleMessage($body, $bot) {
         (stristr($body->text, 'temp') && stristr($body->text, 'leah'))
     ) {
         return handleLeahTemp($body, $bot);
+    }
+    
+    if ((stristr($body->text, 'notify') && stristr($body->text, 'sleeping') && stristr($body->text, 'leah'))
+    ) {
+        $notifySubscribers[] = ['subscriber' => $body->sender, 'checkCondition' => function() {
+                $data = analyzeLeahData();
+                if ($data['inBedProb'] > 0.6 && !$data['moving']) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }, 'message' => 'Looks like Leah fell asleep'];
+        $bot->send(new Message($body->sender, "Ok, will let you know."));
     }
     
     if (
@@ -181,15 +206,14 @@ function sendGraph($body, $bot) {
 
 function handleLeahCrib($body, $bot) {
     // Get status from neural net
-    $status = json_decode(file_get_contents('/home/sergey/git-source/leah-in-crib-machine-learning/history.json'), true);
-    $data = analyzeLeahData($status);
+    $data = analyzeLeahData();
     if ($data['age'] < 300) {
         if ($data['inBedProb'] >= 0.4 && $data['inBedProb'] <= 0.6) {
             $message = 'Not sure, check out the pic';
         } else if ($data['inBedProb'] > 0.6 && !$data['moving']) {
             $message = 'Looks sleeping to me';
         } else if ($data['inBedProb'] > 0.6 && $data['moving']) {
-            $message = 'Does not seem like it';
+            $message = 'Does not seem like she\'s sleeping';
         } else if ($data['inBedProb'] < 0.4) {
             $message = 'Seems nobody\'s there';
         }
@@ -273,7 +297,8 @@ function ctof($c) {
     return(($c * 9/5) + 32);
 }
 
-function analyzeLeahData($data) {
+function analyzeLeahData() {
+    $data = json_decode(file_get_contents('/home/sergey/git-source/leah-in-crib-machine-learning/history.json'), true);
     $moving = false;
     $inBedProb = 0;
     $j=0;
@@ -282,16 +307,12 @@ function analyzeLeahData($data) {
         if ($j<5 && $data[$i]["motion"] == 1) {
             $moving = true;
         }
-        // Probability estimate for last 10 samples
-        if ($j<10) {
-            $inBedProb+=$data[$i]["prediction"];
-        }
         $j++;
-        if ($j>=10) {
+        if ($j>=5) {
             break;
         }
     }
     $inBedProb = $inBedProb/$j;
     $last = $data[count($data)-1];
-    return (['moving' => $moving, 'inBedProb' => $inBedProb, 'age' => (time()-$last['time'])]);
+    return (['moving' => $moving, 'inBedProb' => $last['prediction'], 'age' => (time()-$last['time'])]);
 }

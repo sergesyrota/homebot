@@ -302,7 +302,7 @@ function analyzeLeahData() {
     $moving = false;
     $inBedProb = 0;
     $j=0;
-    for ($i=count($data)-1; $i--; $i>=0) {
+    for ($i=count($data)-1; $i>=0; $i--) {
         // Motion is only relevant for last 5 samples
         if ($j<10 && $data[$i]["motion"] == 1) {
             $moving = true;

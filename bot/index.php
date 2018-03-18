@@ -120,6 +120,7 @@ function handleMessage($body, $bot) {
     
     if ((stristr($body->text, 'notify') && stristr($body->text, 'sleeping') && stristr($body->text, 'leah'))
     ) {
+        /*
         $notifySubscribers[] = ['subscriber' => $body->sender, 'checkCondition' => function() {
                 $data = analyzeLeahData();
                 if ($data['inBedProb'] > 0.6 && !$data['moving']) {
@@ -128,6 +129,20 @@ function handleMessage($body, $bot) {
                     return false;
                 }
             }, 'message' => 'Looks like Leah fell asleep'];
+        */
+        $bot->send(new Message($body->sender, "Sorry, don't have info on this right now."));
+    }
+    
+    if ((stristr($body->text, 'notify') && stristr($body->text, 'garage') && stristr($body->text, 'open'))
+    ) {
+        $notifySubscribers[] = ['subscriber' => $body->sender, 'checkCondition' => function() {
+                $data = getGarageDoors();
+                if ($data->garage) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }, 'message' => 'Garage was opened.'];
         $bot->send(new Message($body->sender, "Ok, will let you know."));
     }
     
@@ -206,6 +221,7 @@ function sendGraph($body, $bot) {
 
 function handleLeahCrib($body, $bot) {
     // Get status from neural net
+    /*
     $data = analyzeLeahData();
     if ($data['age'] < 300) {
         if ($data['inBedProb'] >= 0.4 && $data['inBedProb'] <= 0.6) {
@@ -218,9 +234,14 @@ function handleLeahCrib($body, $bot) {
             $message = 'Seems nobody\'s there';
         }
         $bot->send(new Message($body->sender, $message));
+    }*/
+    //$url = "http://cam-living.syrota.com/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=view&pwd=view";
+    $url = getenv('CAMERA_URL');
+    if (!empty($url)) {
+        sendImage($body, $bot, $url, __DIR__.'/leah-images/', true);
+    } else {
+        $bot->send(new Message($body->sender, 'Sorry, we no camera configured.'));
     }
-    $url = "http://cam-living.syrota.com/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=view&pwd=view";
-    sendImage($body, $bot, $url, __DIR__.'/leah-images/', true);
 }
 
 function sendImage($body, $bot, $url, $path='/tmp', $preserve=false) {
@@ -240,13 +261,13 @@ function sendImage($body, $bot, $url, $path='/tmp', $preserve=false) {
 }
 
 function handleGarageStatus($body, $bot) {
-    $data = json_decode(tryCmd('GarageSens', 'getDoors', 1));
+    $data = getGarageDoors();
     $msg = sprintf("Garage is %s.", ($data->garage ? "open" : "closed"));
     $bot->send(new Message($body->sender, $msg));
 }
 
 function handleGarageOpen($body, $bot) {
-    $data = json_decode(tryCmd('GarageSens', 'getDoors', 1));
+    $data = getGarageDoors();
     if (0 == $data->garage) {
         $status = tryCmd('GarageSens', 'openGarage', 1);
         if ('OK' == $status) {
@@ -258,7 +279,7 @@ function handleGarageOpen($body, $bot) {
 }
 
 function handleGarageClose($body, $bot) {
-    $data = json_decode(tryCmd('GarageSens', 'getDoors', 1));
+    $data = getGarageDoors();
     if (1 == $data->garage) {
         $status = tryCmd('GarageSens', 'closeGarage', 1);
         if ('OK' == $status) {
@@ -267,6 +288,11 @@ function handleGarageClose($body, $bot) {
     } else {
         handleGarageStatus($body, $bot);
     }
+}
+
+function getGarageDoors($retry=1) {
+    $data = json_decode(tryCmd('GarageSens', 'getDoors', $retry));
+    return $data;
 }
 
 function handleWakePc($body, $bot) {

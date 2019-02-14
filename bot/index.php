@@ -1,5 +1,8 @@
 <?php
 
+if (time() < strtotime('2018-08-16 14:00:00')) {
+	die();
+}
 require_once __DIR__ . '/vendor/autoload.php';
 
 // CRON setup and re-run protection
@@ -155,6 +158,14 @@ function handleMessage($body, $bot) {
     }
     
     if (
+        (stristr($body->text, 'show') && stristr($body->text, 'sam')) ||
+        (stristr($body->text, 'crib') && stristr($body->text, 'sam')) ||
+        (stristr($body->text, 'sleeping') && stristr($body->text, 'sam'))
+    ) {
+        return handleSamCrib($body, $bot);
+    }
+    
+    if (
         (stristr($body->text, 'garage open')) ||
         (stristr($body->text, 'garage closed'))
     ) {
@@ -177,6 +188,12 @@ function handleMessage($body, $bot) {
         (stristr($body->text, 'wake pc'))
     ) {
         return handleWakePc($body, $bot);
+    }
+    
+    if (
+        (stristr($body->text, 'ack sump pump'))
+    ) {
+        return handleSumpPumpAck($body, $bot);
     }
     
     return handleUnknown($body, $bot);
@@ -236,16 +253,25 @@ function handleLeahCrib($body, $bot) {
         $bot->send(new Message($body->sender, $message));
     }*/
     //$url = "http://cam-living.syrota.com/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=view&pwd=view";
-    $url = getenv('CAMERA_URL');
+    $url = getenv('LEAH_CAMERA');
     if (!empty($url)) {
         sendImage($body, $bot, $url, __DIR__.'/leah-images/', true);
     } else {
-        $bot->send(new Message($body->sender, 'Sorry, we no camera configured.'));
+        $bot->send(new Message($body->sender, 'Sorry, no camera configured.'));
+    }
+}
+
+function handleSamCrib($body, $bot) {
+    $url = getenv('SAM_CAMERA');
+    if (!empty($url)) {
+        sendImage($body, $bot, $url, __DIR__.'/sam-images/', true);
+    } else {
+        $bot->send(new Message($body->sender, 'Sorry, no camera configured.'));
     }
 }
 
 function sendImage($body, $bot, $url, $path='/tmp', $preserve=false) {
-    $img = tempnam($path, 'homebot-image').".jpg";
+    $img = $path . time() . ".jpg";
     file_put_contents($img, file_get_contents($url));
     $token = getRequiredEnv('FB_PAGE_TOKEN');
     $curlCommand = "curl  \
@@ -275,6 +301,15 @@ function handleGarageOpen($body, $bot) {
         }
     } else {
         handleGarageStatus($body, $bot);
+    }
+}
+
+function handleSumpPumpAck($body, $bot) {
+    $status = tryCmd('SumpPump', 'ackAlert');
+    if ('OK' == $status) {
+        $bot->send(new Message($body->sender, "Done"));
+    } else {
+        $bot->send(new Message($body->sender, "Didn't work: " . $status));
     }
 }
 

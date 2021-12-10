@@ -64,8 +64,8 @@ while (true) {
 
         handleMessage(json_decode($message[0]['Body']), $bot);
     // Do something with the message
-//    echo "Next message in queue: \n";
-//    print_r($message[0]);
+    echo "Next message in queue: \n";
+    print_r($message[0]);
 //    $body = json_decode($message[0]['Body']);
 //    print_r($body);
 //    $bot->send(new Message($body->sender, $body->text));
@@ -331,7 +331,7 @@ function getGarageDoors($retry=1) {
 }
 
 function handleWakePc($body, $bot) {
-    exec('wakelan BC:5F:F4:65:A8:13', $out, $retval);
+    exec('wakelan 24:4b:fe:e0:db:4f', $out, $retval);
     if ($retval != 0) {
         $bot->send(new Message($body->sender, "Not able to wake: " . $out));
     }
